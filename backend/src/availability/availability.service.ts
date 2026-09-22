@@ -7,18 +7,37 @@ export class AvailabilityService {
     private readonly firebaseService: FirebaseService,
   ) {}
 
-  async getAvailability(courtId: string, date: string) {
-    const db = this.firebaseService.firestore;
+  async getAvailability(
+  courtId: string,
+  date: string,
+) {
+  try {
+    const db =
+      this.firebaseService.firestore;
 
-    const snapshot = await db
-      .collection('bookingSlots')
-      .where('courtId', '==', courtId)
-      .where('date', '==', date)
-      .get();
+    const snapshot =
+      await db
+        .collection(
+          'bookingSlots',
+        )
+        .where(
+          'courtId',
+          '==',
+          courtId,
+        )
+        .where(
+          'date',
+          '==',
+          date,
+        )
+        .get();
 
-    const bookedTimes = snapshot.docs.map(
-      (doc) => doc.data().startTime,
-    );
+    const bookedTimes =
+      snapshot.docs.map(
+        (doc) =>
+          doc.data()
+            .startTime,
+      );
 
     const slots = [
       { startTime: '06:00', endTime: '07:00' },
@@ -45,10 +64,25 @@ export class AvailabilityService {
       courtId,
       date,
 
-      slots: slots.map((slot) => ({
-        ...slot,
-        available: !bookedTimes.includes(slot.startTime),
-      })),
+      slots:
+        slots.map(
+          (slot) => ({
+            ...slot,
+
+            available:
+              !bookedTimes.includes(
+                slot.startTime,
+              ),
+          }),
+        ),
     };
-  }
+  } catch (error) {
+    console.error(
+      'Availability Firestore error:',
+      error,
+    );
+
+    throw error;
+        }
+    }
 }
