@@ -37,6 +37,14 @@ async function bootstrap() {
       ),
     );
 
+  /*
+   * Netlify requests arrive as:
+   * /api/courts
+   * /api/bookings
+   * /api/admin/bookings
+   */
+  app.setGlobalPrefix('api');
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
