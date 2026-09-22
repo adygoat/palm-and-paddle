@@ -1,9 +1,9 @@
 [build]
-  command = "cd backend && npm ci && cd ../frontend && npm ci && npm run build"
+  command = "cd backend && npm ci && npm run build && cd ../frontend && npm ci && npm run build"
   publish = "frontend/dist"
 
 [functions]
-  directory = "backend/src/netlify/functions"
+  directory = "backend/dist/netlify/functions"
   node_bundler = "esbuild"
   ignored_node_modules = [
     "@nestjs/microservices",
