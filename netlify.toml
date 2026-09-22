@@ -1,6 +1,5 @@
-@'
 [build]
-  command = "cd backend && npm install && cd ../frontend && npm install && npm run build"
+  command = "cd backend && npm ci && cd ../frontend && npm ci && npm run build"
   publish = "frontend/dist"
 
 [functions]
@@ -16,4 +15,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-'@ | Set-Content .\netlify.toml
