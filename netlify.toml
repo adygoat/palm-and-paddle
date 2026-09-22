@@ -5,6 +5,10 @@
 [functions]
   directory = "backend/src/netlify/functions"
   node_bundler = "esbuild"
+  ignored_node_modules = [
+    "@nestjs/microservices",
+    "@nestjs/websockets"
+  ]
 
 [[redirects]]
   from = "/api/*"
