@@ -15,6 +15,7 @@ interface Slot {
   startTime: string;
   endTime: string;
   available: boolean;
+  reason?: 'CLOSED' | 'BOOKED' | null;
 }
 
 interface AvailabilityResponse {
@@ -219,31 +220,61 @@ export default function Booking() {
         }
 
         const combined =
-          first.slots.map(
-            (slot) => {
-              const available =
-                results.every(
-                  (court) => {
-                    const matching =
-                      court.slots.find(
-                        (item) =>
-                          item.startTime ===
-                          slot.startTime,
-                      );
-
-                    return (
-                      matching?.available ===
-                      true
+            first.slots.map(
+              (slot) => {
+                const matchingSlots =
+                  results
+                    .map(
+                      (court) =>
+                        court.slots.find(
+                          (item) =>
+                            item.startTime ===
+                            slot.startTime,
+                        ),
+                    )
+                    .filter(
+                      (
+                        item,
+                      ): item is Slot =>
+                        Boolean(item),
                     );
-                  },
-                );
 
-              return {
-                ...slot,
-                available,
-              };
-            },
-          );
+                const available =
+                  matchingSlots.length ===
+                    results.length &&
+                  matchingSlots.every(
+                    (item) =>
+                      item.available,
+                  );
+
+                let reason:
+                  | 'CLOSED'
+                  | 'BOOKED'
+                  | null = null;
+
+                if (!available) {
+                  if (
+                    matchingSlots.some(
+                      (item) =>
+                        item.reason ===
+                        'BOOKED',
+                    )
+                  ) {
+                    reason =
+                      'BOOKED';
+                  } else {
+                    reason =
+                      'CLOSED';
+                  }
+                }
+
+                return {
+                  ...slot,
+                  available,
+                  reason,
+                };
+              },
+            );
 
         setCombinedSlots(
           combined,
@@ -446,7 +477,7 @@ export default function Booking() {
       ) {
         if (
           hour >= 6 &&
-          hour < 18
+          hour < 17
         ) {
           dayHours++;
         } else {
@@ -753,13 +784,15 @@ export default function Booking() {
                             'slot',
                             slot.available
                               ? 'slot-available'
-                              : 'slot-booked',
+                              : slot.reason ===
+                                  'CLOSED'
+                                ? 'slot-closed'
+                                : 'slot-booked',
+
                             selected
                               ? 'slot-selected'
                               : '',
-                          ].join(
-                            ' ',
-                          )}
+                          ].join(' ')}
                           onClick={() =>
                             handleSlotClick(
                               index,
@@ -767,17 +800,21 @@ export default function Booking() {
                           }
                         >
                           <strong>
-                            {displayTime(
-                              slot.startTime,
-                            )}
-                          </strong>
+                          {displayTime(
+                            slot.startTime,
+                          )}
+                        </strong>
 
-                          <span>
-                            to{' '}
-                            {displayTime(
-                              slot.endTime,
-                            )}
-                          </span>
+                        <span>
+                          {slot.available
+                            ? `to ${displayTime(
+                                slot.endTime,
+                              )}`
+                            : slot.reason ===
+                                'CLOSED'
+                              ? 'CLOSED'
+                              : 'BOOKED'}
+                        </span>
                         </button>
                       );
                     },
@@ -881,7 +918,7 @@ export default function Booking() {
                 0 && (
                 <div className="price-row">
                   <span>
-                    4 PM – 12 AM
+                    5 PM – 12 AM
 
                     <small>
                       {
@@ -1069,7 +1106,7 @@ export default function Booking() {
           <p className="booking-disclaimer">
             Your booking remains
             PENDING until confirmed by
-            Palm & Paddle Pickleball Court by Chocs & Dwacks.
+            ChocsDwacks Palm & Paddle Sports Center
           </p>
         </form>
 
@@ -1095,7 +1132,7 @@ export default function Booking() {
 
           <div className="sidebar-rate">
             <span>
-              4 PM – 12 AM
+              5 PM – 12 AM
             </span>
 
             <strong>
@@ -1107,6 +1144,30 @@ export default function Booking() {
             Rates are per court,
             per hour.
           </p>
+
+  <div className="side-divider" />
+
+          <h3>
+            Court Availability
+          </h3>
+
+          <ul>
+            <li>
+              Both courts: 6 AM – 9 AM
+            </li>
+
+            <li>
+              Both courts: 9 AM – 4 PM closed
+            </li>
+
+            <li>
+              Court 1: 4 PM – 6 PM
+            </li>
+
+            <li>
+              Court 2: 4 PM – 12 AM
+            </li>
+          </ul>
 
           <div className="side-divider" />
 
@@ -1120,22 +1181,22 @@ export default function Booking() {
             </li>
 
             <li>
-              Tap the time blocks to
+              Tap the time blocks to 
               choose your booking range.
             </li>
 
             <li>
               Book multiple consecutive
-              hours.
+               hours.
             </li>
 
             <li>
               Unavailable hours cannot
-              be selected.
+               be selected.
             </li>
 
             <li>
-              Final confirmation is
+              Final confirmation is 
               sent through email.
             </li>
           </ul>

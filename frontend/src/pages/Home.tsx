@@ -9,7 +9,7 @@ export default function Home() {
       <section className="hero">
         <div className="hero-copy">
           <span className="eyebrow">
-            PALM & PADDLE PICKLEBALL COURT
+            ChocsDwacks Palm & Paddle Sports Center
           </span>
 
           <h1>
@@ -132,7 +132,7 @@ export default function Home() {
             </h2>
 
             <p>
-              Visit Palm & Paddle Pickleball Court by Chocs & Dwacks
+              Visit ChocsDwacks Palm & Paddle Sports Center
               or open the location in Google Maps
               for directions.
             </p>
@@ -180,7 +180,7 @@ export default function Home() {
 
               <div>
                 <strong>
-                  Palm & Paddle Pickleball Court by Chocs & Dwacks
+                  ChocsDwacks Palm & Paddle Sports Center
                 </strong>
 
                 <span>
@@ -259,7 +259,7 @@ export default function Home() {
             <h3>Wait for confirmation</h3>
 
             <p>
-              Palm & Paddle will review
+              ChocsDwacks Palm & Paddle Sports Center will review
               your request and email you.
             </p>
           </article>
@@ -293,7 +293,7 @@ export default function Home() {
 
         <p>
           © {new Date().getFullYear()}
-          {' '}Palm & Paddle Pickleball Court by Chocs & Dwacks
+          {' '}ChocsDwacks Palm & Paddle Sports Center
         </p>
       </footer>
     </main>

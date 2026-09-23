@@ -800,7 +800,7 @@ export default function AdminDashboard() {
 
           <div>
             <strong>
-              Palm & Paddle Pickleball Court by Chocs & Dwacks
+              ChocsDwacks Palm & Paddle Sports Center
             </strong>
 
             <span>

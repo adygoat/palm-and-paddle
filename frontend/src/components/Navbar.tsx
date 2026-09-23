@@ -10,7 +10,7 @@ export default function Navbar() {
           className="nav-logo"
         />
 
-        <span>Palm & Paddle Pickleball Court by Chocs & Dwacks</span>
+        <span>ChocsDwacks Palm & Paddle Sports Center</span>
       </Link>
 
       <div className="nav-links">

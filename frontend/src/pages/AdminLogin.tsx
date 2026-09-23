@@ -104,7 +104,7 @@ export default function AdminLogin() {
         </h1>
 
         <p className="muted">
-          Manage Palm & Paddle Pickleball Court by Chocs & Dwacks
+          Manage ChocsDwacks Palm & Paddle Sports Center
           reservations.
         </p>
 

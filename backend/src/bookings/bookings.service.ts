@@ -19,37 +19,107 @@ export class BookingsService {
     startTime: string,
     endTime: string,
   ): string[] {
-    const [startHour] = startTime.split(':').map(Number);
+    const [startHour] =
+      startTime
+        .split(':')
+        .map(Number);
 
-    let [endHour] = endTime.split(':').map(Number);
+    let [endHour] =
+      endTime
+        .split(':')
+        .map(Number);
 
-    if (endTime === '00:00') {
+    if (
+      endTime ===
+      '00:00'
+    ) {
       endHour = 24;
     }
 
-    if (startHour < 6) {
+    if (
+      startHour < 6
+    ) {
       throw new BadRequestException(
         'Booking cannot start before 6:00 AM.',
       );
     }
 
-    if (startHour >= endHour) {
+    if (
+      startHour >=
+      endHour
+    ) {
       throw new BadRequestException(
         'End time must be later than start time.',
       );
     }
 
-    const slots: string[] = [];
+    const slots: string[] =
+      [];
 
-    for (let hour = startHour; hour < endHour; hour++) {
+    for (
+      let hour = startHour;
+      hour < endHour;
+      hour++
+    ) {
       slots.push(
-        `${hour.toString().padStart(2, '0')}:00`,
+        `${hour
+          .toString()
+          .padStart(
+            2,
+            '0',
+          )}:00`,
       );
     }
 
     return slots;
   }
 
+private isCourtTimeAllowed(
+  courtId: string,
+  startTime: string,
+): boolean {
+  const hour =
+    Number(
+      startTime.split(
+        ':',
+      )[0],
+    );
+  if (
+    hour >= 6 &&
+    hour < 9
+  ) {
+    return true;
+  }
+
+  if (
+    hour >= 9 &&
+    hour < 16
+  ) {
+    return false;
+  }
+
+  if (
+    courtId ===
+    'court-1'
+  ) {
+    return (
+      hour >= 16 &&
+      hour < 18
+    );
+  }
+
+  if (
+    courtId ===
+    'court-2'
+  ) {
+    return (
+      hour >= 16 &&
+      hour < 24
+    );
+  }
+
+  return false;
+}
   private calculatePricing(
     courtIds: string[],
     requestedSlots: string[],
@@ -57,12 +127,21 @@ export class BookingsService {
     let daytimeHours = 0;
     let eveningHours = 0;
 
-    for (const time of requestedSlots) {
-      const hour = Number(
-        time.split(':')[0],
-      );
+    for (
+      const time
+      of requestedSlots
+    ) {
+      const hour =
+        Number(
+          time.split(
+            ':',
+          )[0],
+        );
 
-      if (hour >= 6 && hour < 18) {
+      if (
+        hour >= 6 &&
+        hour < 17
+      ) {
         daytimeHours++;
       } else {
         eveningHours++;
@@ -72,8 +151,11 @@ export class BookingsService {
     const courtCount =
       courtIds.length;
 
-    const daytimeRate = 250;
-    const eveningRate = 300;
+    const daytimeRate =
+      250;
+
+    const eveningRate =
+      300;
 
     const daytimeSubtotal =
       daytimeHours *
@@ -89,17 +171,23 @@ export class BookingsService {
       courtCount,
 
       daytime: {
-        hours: daytimeHours,
+        hours:
+          daytimeHours,
+
         ratePerCourtPerHour:
           daytimeRate,
+
         subtotal:
           daytimeSubtotal,
       },
 
       evening: {
-        hours: eveningHours,
+        hours:
+          eveningHours,
+
         ratePerCourtPerHour:
           eveningRate,
+
         subtotal:
           eveningSubtotal,
       },
@@ -113,7 +201,9 @@ export class BookingsService {
     };
   }
 
-  async create(dto: CreateBookingDto) {
+  async create(
+    dto: CreateBookingDto,
+  ) {
     const db =
       this.firebaseService.firestore;
 
@@ -123,6 +213,38 @@ export class BookingsService {
         dto.endTime,
       );
 
+    /*
+     * Validate the permanent
+     * court schedule first.
+     */
+    const invalidSlot =
+      dto.courtIds
+        .flatMap(
+          (courtId) =>
+            requestedSlots.map(
+              (time) => ({
+                courtId,
+                time,
+              }),
+            ),
+        )
+        .find(
+          ({
+            courtId,
+            time,
+          }) =>
+            !this.isCourtTimeAllowed(
+              courtId,
+              time,
+            ),
+        );
+
+    if (invalidSlot) {
+      throw new BadRequestException(
+        `${invalidSlot.courtId} is not available at ${invalidSlot.time}.`,
+      );
+    }
+
     const pricing =
       this.calculatePricing(
         dto.courtIds,
@@ -131,105 +253,130 @@ export class BookingsService {
 
     const bookingRef =
       db
-        .collection('bookings')
+        .collection(
+          'bookings',
+        )
         .doc();
 
     const reference =
       'PP-' +
       Math.random()
         .toString(36)
-        .substring(2, 8)
+        .substring(
+          2,
+          8,
+        )
         .toUpperCase();
 
     await db.runTransaction(
-      async (transaction) => {
+      async (
+        transaction,
+      ) => {
         const slotRefs =
-          dto.courtIds.flatMap(
-            (courtId) =>
-              requestedSlots.map(
-                (time) => {
-                  const slotId =
-                    `${courtId}_${dto.date}_${time}`.replace(
-                      ':',
-                      '-',
-                    );
-
-                  return {
-                    courtId,
+          dto.courtIds
+            .flatMap(
+              (
+                courtId,
+              ) =>
+                requestedSlots.map(
+                  (
                     time,
+                  ) => {
+                    const slotId =
+                      `${courtId}_${dto.date}_${time}`
+                        .replace(
+                          ':',
+                          '-',
+                        );
 
-                    ref: db
-                      .collection(
-                        'bookingSlots',
-                      )
-                      .doc(slotId),
-                  };
-                },
-              ),
-          );
+                    return {
+                      courtId,
+                      time,
+
+                      ref:
+                        db
+                          .collection(
+                            'bookingSlots',
+                          )
+                          .doc(
+                            slotId,
+                          ),
+                    };
+                  },
+                ),
+            );
 
         const slotSnapshots =
           await Promise.all(
             slotRefs.map(
-              ({ ref }) =>
-                transaction.get(ref),
+              ({
+                ref,
+              }) =>
+                transaction.get(
+                  ref,
+                ),
             ),
           );
 
         const hasConflict =
           slotSnapshots.some(
-            (snapshot) =>
+            (
+              snapshot,
+            ) =>
               snapshot.exists,
           );
 
-        if (hasConflict) {
+        if (
+          hasConflict
+        ) {
           throw new ConflictException(
             'One or more selected courts are already booked during the requested time.',
           );
         }
 
-        const bookingData = {
-          customerName:
-            dto.customerName,
+        const bookingData =
+          {
+            customerName:
+              dto.customerName,
 
-          email:
-            dto.email,
+            email:
+              dto.email,
 
-          phone:
-            dto.phone,
+            phone:
+              dto.phone,
 
-          courtIds:
-            dto.courtIds,
+            courtIds:
+              dto.courtIds,
 
-          date:
-            dto.date,
+            date:
+              dto.date,
 
-          startTime:
-            dto.startTime,
+            startTime:
+              dto.startTime,
 
-          endTime:
-            dto.endTime,
+            endTime:
+              dto.endTime,
 
-          reference,
+            reference,
 
-          status:
-            'PENDING',
+            status:
+              'PENDING',
 
-          pricing,
+            pricing,
 
-          totalPrice:
-            pricing.totalPrice,
+            totalPrice:
+              pricing.totalPrice,
 
-          createdAt:
-            new Date(),
+            createdAt:
+              new Date(),
 
-          ...(dto.notes
-            ? {
-                notes:
-                  dto.notes,
-              }
-            : {}),
-        };
+            ...(dto.notes
+              ? {
+                  notes:
+                    dto.notes,
+                }
+              : {}),
+          };
 
         transaction.set(
           bookingRef,

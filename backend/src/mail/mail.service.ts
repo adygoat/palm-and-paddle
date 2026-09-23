@@ -29,11 +29,11 @@ export class MailService {
   }) {
     try {
       await this.transporter.sendMail({
-        from: `"Palm & Paddle Pickleball Court by Chocs & Dwacks" <${process.env.MAIL_USER}>`,
+        from: `"ChocsDwacks Palm & Paddle Sports Center" <${process.env.MAIL_USER}>`,
         to: process.env.ADMIN_EMAIL,
         subject: `New Booking Request - ${booking.reference}`,
         html: `
-          <h2>New Palm & Paddle Pickleball Court by Chocs & Dwacks Booking Request</h2>
+          <h2>ChocsDwacks Palm & Paddle Sports Center Booking Request</h2>
 
           <p><strong>Reference:</strong> ${booking.reference}</p>
 
@@ -103,7 +103,7 @@ export class MailService {
   }) {
     try {
       await this.transporter.sendMail({
-        from: `"Palm & Paddle Pickleball Court by Chocs & Dwacks" <${process.env.MAIL_USER}>`,
+        from: `"ChocsDwacks Palm & Paddle Sports Center" <${process.env.MAIL_USER}>`,
         to: booking.email,
         subject: `Booking Confirmed - ${booking.reference}`,
         html: `
@@ -146,7 +146,7 @@ export class MailService {
           </p>
 
           <p>
-            Thank you for booking with Palm & Paddle Pickleball Court by Chocs & Dwacks!
+            Thank you for booking with ChocsDwacks Palm & Paddle Sports Center!
           </p>
         `,
       });
@@ -174,7 +174,7 @@ export class MailService {
   }) {
     try {
       await this.transporter.sendMail({
-        from: `"Palm & Paddle Pickleball Court by Chocs & Dwacks" <${process.env.MAIL_USER}>`,
+        from: `"ChocsDwacks Palm & Paddle Sports Center" <${process.env.MAIL_USER}>`,
         to: booking.email,
         subject: `Booking Cancelled - ${booking.reference}`,
         html: `
@@ -183,7 +183,7 @@ export class MailService {
           <p>Hello ${booking.customerName},</p>
 
           <p>
-            Your Palm & Paddle Pickleball Court by Chocs & Dwacks booking has been cancelled.
+            Your ChocsDwacks Palm & Paddle Sports Center booking has been cancelled.
           </p>
 
           <p>
@@ -223,7 +223,7 @@ export class MailService {
           </p>
 
           <p>
-            If you need assistance, please contact Palm & Paddle Pickleball Court by Chocs & Dwacks.
+            If you need assistance, please contact ChocsDwacks Palm & Paddle Sports Center.
           </p>
         `,
       });

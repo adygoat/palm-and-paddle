@@ -3481,4 +3481,10 @@ textarea {
     padding-top: 20px;
   }
 }
+.slot-closed {
+  background: #eeeeee;
+  color: #777;
+  border-color: #dddddd;
+  cursor: not-allowed;
+}
 }
