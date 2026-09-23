@@ -59,12 +59,12 @@ export default function Home() {
 
         <div>
           <strong>₱250</strong>
-          <span>6 AM – 6 PM</span>
+          <span>6 AM – 5 PM</span>
         </div>
 
         <div>
           <strong>₱300</strong>
-          <span>6 PM – 12 AM</span>
+          <span>5 PM – 12 AM</span>
         </div>
 
         <div>
@@ -100,7 +100,7 @@ export default function Home() {
             </h3>
 
             <p>
-              6:00 AM – 6:00 PM
+              6:00 AM – 5:00 PM
             </p>
           </article>
 
@@ -113,7 +113,7 @@ export default function Home() {
             </h3>
 
             <p>
-              6:00 PM – 12:00 AM
+              5:00 PM – 12:00 AM
             </p>
           </article>
         </div>
