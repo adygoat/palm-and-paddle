@@ -5,7 +5,7 @@ import { FirebaseService } from '../firebase/firebase.service';
 export class AvailabilityService {
   constructor(
     private readonly firebaseService: FirebaseService,
-  ) {}
+  ) { }
 
   private isCourtTimeAllowed(
     courtId: string,
@@ -52,6 +52,30 @@ export class AvailabilityService {
     }
 
     return false;
+  }
+
+  private isPastSlotManila(
+    date: string,
+    startTime: string,
+  ): boolean {
+    /*
+     * Explicit +08:00 = Manila / Philippine time.
+     *
+     * Example:
+     * 2026-09-24T16:00:00+08:00
+     */
+    const slotStart =
+      new Date(
+        `${date}T${startTime}:00+08:00`,
+      );
+
+    const now =
+      new Date();
+
+    return (
+      slotStart.getTime() <=
+      now.getTime()
+    );
   }
 
   async getAvailability(
@@ -125,19 +149,28 @@ export class AvailabilityService {
                   slot.startTime,
                 );
 
+              const past =
+                this.isPastSlotManila(
+                  date,
+                  slot.startTime,
+                );
+
               return {
                 ...slot,
 
                 available:
                   allowed &&
-                  !booked,
+                  !booked &&
+                  !past,
 
                 reason:
-                  !allowed
-                    ? 'CLOSED'
-                    : booked
-                      ? 'BOOKED'
-                      : null,
+                  past
+                    ? 'PAST'
+                    : !allowed
+                      ? 'CLOSED'
+                      : booked
+                        ? 'BOOKED'
+                        : null,
               };
             },
           ),
