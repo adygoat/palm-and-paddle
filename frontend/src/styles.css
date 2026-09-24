@@ -3160,6 +3160,7 @@ textarea {
         )
       );
   }
+}
 
   /* =========================================
    BULK COURT CLOSURE
@@ -3604,5 +3605,4 @@ textarea {
 
 .facebook-message-button:hover {
   opacity: 0.9;
-}
 }
