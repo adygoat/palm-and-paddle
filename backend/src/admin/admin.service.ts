@@ -13,7 +13,7 @@ export class AdminService {
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   async getAllBookings() {
     const db = this.firebaseService.firestore;
@@ -32,61 +32,61 @@ export class AdminService {
   async getCourtSchedule(
     courtId: string,
     date: string,
-    ) {
+  ) {
     const db = this.firebaseService.firestore;
 
     const snapshot = await db
-        .collection('bookingSlots')
-        .where('courtId', '==', courtId)
-        .where('date', '==', date)
-        .get();
+      .collection('bookingSlots')
+      .where('courtId', '==', courtId)
+      .where('date', '==', date)
+      .get();
 
     const occupiedSlots = new Map<
-        string,
-        'BOOKED' | 'BLOCKED'
+      string,
+      'BOOKED' | 'BLOCKED'
     >();
 
     snapshot.docs.forEach((doc) => {
-        const data = doc.data();
+      const data = doc.data();
 
-        occupiedSlots.set(
+      occupiedSlots.set(
         data.startTime,
         data.type === 'MANUAL_BLOCK'
-            ? 'BLOCKED'
-            : 'BOOKED',
-        );
+          ? 'BLOCKED'
+          : 'BOOKED',
+      );
     });
 
     const slots = [];
 
     for (let hour = 6; hour < 24; hour++) {
-        const startTime =
+      const startTime =
         `${hour.toString().padStart(2, '0')}:00`;
 
-        const nextHour = hour + 1;
+      const nextHour = hour + 1;
 
-        const endTime =
+      const endTime =
         nextHour === 24
-            ? '00:00'
-            : `${nextHour
-                .toString()
-                .padStart(2, '0')}:00`;
+          ? '00:00'
+          : `${nextHour
+            .toString()
+            .padStart(2, '0')}:00`;
 
-        slots.push({
+      slots.push({
         startTime,
         endTime,
         status:
-            occupiedSlots.get(startTime) ??
-            'OPEN',
-        });
+          occupiedSlots.get(startTime) ??
+          'OPEN',
+      });
     }
 
     return {
-        courtId,
-        date,
-        slots,
+      courtId,
+      date,
+      slots,
     };
-    }
+  }
 
   async getBookingById(id: string) {
     const db = this.firebaseService.firestore;
@@ -107,6 +107,136 @@ export class AdminService {
     return {
       id: bookingSnapshot.id,
       ...bookingSnapshot.data(),
+    };
+  }
+
+  async verifyDeposit(id: string) {
+    const db =
+      this.firebaseService.firestore;
+
+    const bookingRef =
+      db
+        .collection('bookings')
+        .doc(id);
+
+    const bookingSnapshot =
+      await bookingRef.get();
+
+    if (!bookingSnapshot.exists) {
+      throw new NotFoundException(
+        'Booking not found.',
+      );
+    }
+
+    const booking =
+      bookingSnapshot.data();
+
+    if (!booking) {
+      throw new NotFoundException(
+        'Booking data not found.',
+      );
+    }
+
+    if (
+      booking.status === 'CANCELLED'
+    ) {
+      throw new BadRequestException(
+        'Cancelled booking cannot have its deposit verified.',
+      );
+    }
+
+    if (
+      booking.status === 'COMPLETED'
+    ) {
+      throw new BadRequestException(
+        'Completed booking cannot have its deposit verified.',
+      );
+    }
+
+    if (
+      booking.depositStatus === 'VERIFIED'
+    ) {
+      throw new BadRequestException(
+        'Security deposit is already verified.',
+      );
+    }
+
+    const securityDeposit =
+      booking.securityDeposit ?? 100;
+
+    const remainingBalance =
+      Math.max(
+        (booking.totalPrice ?? 0) -
+        securityDeposit,
+        0,
+      );
+
+    await bookingRef.update({
+      depositStatus:
+        'VERIFIED',
+
+      depositPaidAmount:
+        securityDeposit,
+
+      depositVerifiedAt:
+        new Date(),
+
+      remainingBalance,
+
+      /*
+       * Once the ₱100 payment
+       * is verified, the booking
+       * becomes confirmed.
+       */
+      status:
+        'CONFIRMED',
+
+      updatedAt:
+        new Date(),
+    });
+
+    await this.mailService
+      .sendBookingConfirmedEmail({
+        reference:
+          booking.reference,
+
+        customerName:
+          booking.customerName,
+
+        email:
+          booking.email,
+
+        courtIds:
+          booking.courtIds,
+
+        date:
+          booking.date,
+
+        startTime:
+          booking.startTime,
+
+        endTime:
+          booking.endTime,
+
+        totalPrice:
+          booking.totalPrice,
+      });
+
+    return {
+      id,
+
+      status:
+        'CONFIRMED',
+
+      depositStatus:
+        'VERIFIED',
+
+      securityDeposit,
+
+      remainingBalance,
+
+      message:
+        'Security deposit verified. Booking confirmed and customer notified.',
     };
   }
 
@@ -224,6 +354,12 @@ export class AdminService {
     if (!booking) {
       throw new NotFoundException(
         'Booking data not found.',
+      );
+    }
+
+    if (booking.depositStatus !== 'VERIFIED') {
+      throw new BadRequestException(
+        'The ₱100 security deposit must be verified before confirming this booking.',
       );
     }
 
@@ -400,91 +536,433 @@ export class AdminService {
   }
 
   async blockCourtSlots(dto: {
-  courtIds: string[];
-  date: string;
-  startTime: string;
-  endTime: string;
-  reason?: string;
-}) {
-  const db =
-    this.firebaseService.firestore;
+    courtIds: string[];
+    date: string;
+    startTime: string;
+    endTime: string;
+    reason?: string;
+  }) {
+    const db =
+      this.firebaseService.firestore;
 
-  const requestedSlots =
-    this.generateHourlySlots(
-      dto.startTime,
-      dto.endTime,
+    const requestedSlots =
+      this.generateHourlySlots(
+        dto.startTime,
+        dto.endTime,
+      );
+
+    const slotRefs =
+      dto.courtIds.flatMap(
+        (courtId) =>
+          requestedSlots.map(
+            (time) => {
+              const slotId =
+                `${courtId}_${dto.date}_${time}`.replace(
+                  ':',
+                  '-',
+                );
+
+              return {
+                courtId,
+                time,
+
+                ref: db
+                  .collection(
+                    'bookingSlots',
+                  )
+                  .doc(slotId),
+              };
+            },
+          ),
+      );
+
+    await db.runTransaction(
+      async (transaction) => {
+        const snapshots =
+          await Promise.all(
+            slotRefs.map(
+              ({ ref }) =>
+                transaction.get(ref),
+            ),
+          );
+
+        const occupied =
+          snapshots.some(
+            (snapshot) =>
+              snapshot.exists,
+          );
+
+        if (occupied) {
+          throw new BadRequestException(
+            'One or more selected time slots are already booked or blocked.',
+          );
+        }
+
+        slotRefs.forEach(
+          ({
+            ref,
+            courtId,
+            time,
+          }) => {
+            transaction.set(
+              ref,
+              {
+                type:
+                  'MANUAL_BLOCK',
+
+                courtId,
+
+                date:
+                  dto.date,
+
+                startTime:
+                  time,
+
+                reason:
+                  dto.reason ??
+                  'Admin block',
+
+                createdAt:
+                  new Date(),
+              },
+            );
+          },
+        );
+      },
     );
 
-  const slotRefs =
-    dto.courtIds.flatMap(
-      (courtId) =>
-        requestedSlots.map(
-          (time) => {
-            const slotId =
-              `${courtId}_${dto.date}_${time}`.replace(
-                ':',
-                '-',
-              );
+    return {
+      message:
+        'Court time successfully blocked.',
 
-            return {
-              courtId,
-              time,
+      courtIds:
+        dto.courtIds,
 
-              ref: db
+      date:
+        dto.date,
+
+      startTime:
+        dto.startTime,
+
+      endTime:
+        dto.endTime,
+    };
+  }
+
+  async unblockCourtSlots(dto: {
+    courtIds: string[];
+    date: string;
+    startTime: string;
+    endTime: string;
+  }) {
+    const db =
+      this.firebaseService.firestore;
+
+    const requestedSlots =
+      this.generateHourlySlots(
+        dto.startTime,
+        dto.endTime,
+      );
+
+    const slotRefs =
+      dto.courtIds.flatMap(
+        (courtId) =>
+          requestedSlots.map(
+            (time) => {
+              const slotId =
+                `${courtId}_${dto.date}_${time}`.replace(
+                  ':',
+                  '-',
+                );
+
+              return db
                 .collection(
                   'bookingSlots',
                 )
-                .doc(slotId),
-            };
+                .doc(slotId);
+            },
+          ),
+      );
+
+    await db.runTransaction(
+      async (transaction) => {
+        for (
+          const slotRef
+          of slotRefs
+        ) {
+          const snapshot =
+            await transaction.get(
+              slotRef,
+            );
+
+          if (
+            !snapshot.exists
+          ) {
+            continue;
+          }
+
+          const data =
+            snapshot.data();
+
+          /*
+           * Never allow admin "unblock"
+           * to delete a real customer's
+           * booking slot.
+           */
+          if (
+            data?.type !==
+            'MANUAL_BLOCK'
+          ) {
+            throw new BadRequestException(
+              'One or more selected slots belong to an actual booking and cannot be manually opened.',
+            );
+          }
+        }
+
+        slotRefs.forEach(
+          (slotRef) => {
+            transaction.delete(
+              slotRef,
+            );
           },
-        ),
+        );
+      },
     );
 
-  await db.runTransaction(
-    async (transaction) => {
-      const snapshots =
-        await Promise.all(
-          slotRefs.map(
-            ({ ref }) =>
-              transaction.get(ref),
+    return {
+      message:
+        'Court time successfully reopened.',
+
+      courtIds:
+        dto.courtIds,
+
+      date:
+        dto.date,
+
+      startTime:
+        dto.startTime,
+
+      endTime:
+        dto.endTime,
+    };
+  }
+
+  async bulkBlockCourtSlots(dto: {
+    courtIds: string[];
+    startDate: string;
+    endDate: string;
+    startTime: string;
+    endTime: string;
+    reason?: string;
+  }) {
+    const db =
+      this.firebaseService.firestore;
+
+    const startDate =
+      new Date(
+        `${dto.startDate}T00:00:00`,
+      );
+
+    const endDate =
+      new Date(
+        `${dto.endDate}T00:00:00`,
+      );
+
+    if (
+      Number.isNaN(
+        startDate.getTime(),
+      ) ||
+      Number.isNaN(
+        endDate.getTime(),
+      )
+    ) {
+      throw new BadRequestException(
+        'Invalid date range.',
+      );
+    }
+
+    if (
+      startDate >
+      endDate
+    ) {
+      throw new BadRequestException(
+        'Start date cannot be after end date.',
+      );
+    }
+
+    const requestedSlots =
+      this.generateHourlySlots(
+        dto.startTime,
+        dto.endTime,
+      );
+
+    if (
+      requestedSlots.length === 0
+    ) {
+      throw new BadRequestException(
+        'Invalid time range.',
+      );
+    }
+
+    const dates: string[] =
+      [];
+
+    const current =
+      new Date(startDate);
+
+    while (
+      current <=
+      endDate
+    ) {
+      const year =
+        current.getFullYear();
+
+      const month =
+        String(
+          current.getMonth() +
+          1,
+        ).padStart(
+          2,
+          '0',
+        );
+
+      const day =
+        String(
+          current.getDate(),
+        ).padStart(
+          2,
+          '0',
+        );
+
+      dates.push(
+        `${year}-${month}-${day}`,
+      );
+
+      current.setDate(
+        current.getDate() +
+        1,
+      );
+    }
+
+    const slotItems =
+      dates.flatMap(
+        (date) =>
+          dto.courtIds.flatMap(
+            (courtId) =>
+              requestedSlots.map(
+                (time) => {
+                  const slotId =
+                    `${courtId}_${date}_${time}`.replace(
+                      ':',
+                      '-',
+                    );
+
+                  return {
+                    courtId,
+                    date,
+                    time,
+
+                    ref: db
+                      .collection(
+                        'bookingSlots',
+                      )
+                      .doc(
+                        slotId,
+                      ),
+                  };
+                },
+              ),
           ),
+      );
+
+    /*
+     * Check for conflicts first.
+     */
+    const snapshots =
+      await Promise.all(
+        slotItems.map(
+          ({ ref }) =>
+            ref.get(),
+        ),
+      );
+
+    const conflicts =
+      snapshots
+        .map(
+          (
+            snapshot,
+            index,
+          ) => ({
+            exists:
+              snapshot.exists,
+
+            item:
+              slotItems[index],
+          }),
+        )
+        .filter(
+          (entry) =>
+            entry.exists,
         );
 
-      const occupied =
-        snapshots.some(
-          (snapshot) =>
-            snapshot.exists,
+    if (
+      conflicts.length >
+      0
+    ) {
+      throw new BadRequestException(
+        'One or more selected slots are already booked or blocked.',
+      );
+    }
+
+    /*
+     * Firestore batch limit is 500 writes.
+     * Split into chunks.
+     */
+    const chunkSize =
+      450;
+
+    for (
+      let index = 0;
+      index <
+      slotItems.length;
+      index += chunkSize
+    ) {
+      const chunk =
+        slotItems.slice(
+          index,
+          index +
+          chunkSize,
         );
 
-      if (occupied) {
-        throw new BadRequestException(
-          'One or more selected time slots are already booked or blocked.',
-        );
-      }
+      const batch =
+        db.batch();
 
-      slotRefs.forEach(
+      chunk.forEach(
         ({
           ref,
           courtId,
+          date,
           time,
         }) => {
-          transaction.set(
+          batch.set(
             ref,
             {
               type:
                 'MANUAL_BLOCK',
 
+              blockType:
+                'BULK',
+
               courtId,
 
-              date:
-                dto.date,
+              date,
 
               startTime:
                 time,
 
               reason:
                 dto.reason ??
-                'Admin block',
+                'Bulk admin block',
 
               createdAt:
                 new Date(),
@@ -492,549 +970,207 @@ export class AdminService {
           );
         },
       );
-    },
-  );
 
-  return {
-    message:
-      'Court time successfully blocked.',
+      await batch.commit();
+    }
 
-    courtIds:
-      dto.courtIds,
+    return {
+      message:
+        'Bulk court closure created successfully.',
 
-    date:
-      dto.date,
+      courtIds:
+        dto.courtIds,
 
-    startTime:
-      dto.startTime,
+      startDate:
+        dto.startDate,
 
-    endTime:
-      dto.endTime,
-  };
+      endDate:
+        dto.endDate,
+
+      startTime:
+        dto.startTime,
+
+      endTime:
+        dto.endTime,
+
+      datesBlocked:
+        dates.length,
+
+      slotsBlocked:
+        slotItems.length,
+    };
   }
 
-  async unblockCourtSlots(dto: {
-  courtIds: string[];
-  date: string;
-  startTime: string;
-  endTime: string;
-}) {
-  const db =
-    this.firebaseService.firestore;
+  async bulkUnblockCourtSlots(dto: {
+    courtIds: string[];
+    startDate: string;
+    endDate: string;
+    startTime: string;
+    endTime: string;
+  }) {
+    const db =
+      this.firebaseService.firestore;
 
-  const requestedSlots =
-    this.generateHourlySlots(
-      dto.startTime,
-      dto.endTime,
-    );
-
-  const slotRefs =
-    dto.courtIds.flatMap(
-      (courtId) =>
-        requestedSlots.map(
-          (time) => {
-            const slotId =
-              `${courtId}_${dto.date}_${time}`.replace(
-                ':',
-                '-',
-              );
-
-            return db
-              .collection(
-                'bookingSlots',
-              )
-              .doc(slotId);
-          },
-        ),
-    );
-
-  await db.runTransaction(
-    async (transaction) => {
-      for (
-        const slotRef
-        of slotRefs
-      ) {
-        const snapshot =
-          await transaction.get(
-            slotRef,
-          );
-
-        if (
-          !snapshot.exists
-        ) {
-          continue;
-        }
-
-        const data =
-          snapshot.data();
-
-        /*
-         * Never allow admin "unblock"
-         * to delete a real customer's
-         * booking slot.
-         */
-        if (
-          data?.type !==
-          'MANUAL_BLOCK'
-        ) {
-          throw new BadRequestException(
-            'One or more selected slots belong to an actual booking and cannot be manually opened.',
-          );
-        }
-      }
-
-      slotRefs.forEach(
-        (slotRef) => {
-          transaction.delete(
-            slotRef,
-          );
-        },
-      );
-    },
-  );
-
-  return {
-    message:
-      'Court time successfully reopened.',
-
-    courtIds:
-      dto.courtIds,
-
-    date:
-      dto.date,
-
-    startTime:
-      dto.startTime,
-
-    endTime:
-      dto.endTime,
-  };
-  }
-
-  async bulkBlockCourtSlots(dto: {
-  courtIds: string[];
-  startDate: string;
-  endDate: string;
-  startTime: string;
-  endTime: string;
-  reason?: string;
-}) {
-  const db =
-    this.firebaseService.firestore;
-
-  const startDate =
-    new Date(
-      `${dto.startDate}T00:00:00`,
-    );
-
-  const endDate =
-    new Date(
-      `${dto.endDate}T00:00:00`,
-    );
-
-  if (
-    Number.isNaN(
-      startDate.getTime(),
-    ) ||
-    Number.isNaN(
-      endDate.getTime(),
-    )
-  ) {
-    throw new BadRequestException(
-      'Invalid date range.',
-    );
-  }
-
-  if (
-    startDate >
-    endDate
-  ) {
-    throw new BadRequestException(
-      'Start date cannot be after end date.',
-    );
-  }
-
-  const requestedSlots =
-    this.generateHourlySlots(
-      dto.startTime,
-      dto.endTime,
-    );
-
-  if (
-    requestedSlots.length === 0
-  ) {
-    throw new BadRequestException(
-      'Invalid time range.',
-    );
-  }
-
-  const dates: string[] =
-    [];
-
-  const current =
-    new Date(startDate);
-
-  while (
-    current <=
-    endDate
-  ) {
-    const year =
-      current.getFullYear();
-
-    const month =
-      String(
-        current.getMonth() +
-          1,
-      ).padStart(
-        2,
-        '0',
+    const startDate =
+      new Date(
+        `${dto.startDate}T00:00:00`,
       );
 
-    const day =
-      String(
-        current.getDate(),
-      ).padStart(
-        2,
-        '0',
+    const endDate =
+      new Date(
+        `${dto.endDate}T00:00:00`,
       );
 
-    dates.push(
-      `${year}-${month}-${day}`,
-    );
+    if (
+      startDate > endDate
+    ) {
+      throw new BadRequestException(
+        'Start date cannot be after end date.',
+      );
+    }
 
-    current.setDate(
-      current.getDate() +
-        1,
-    );
-  }
+    const requestedSlots =
+      this.generateHourlySlots(
+        dto.startTime,
+        dto.endTime,
+      );
 
-  const slotItems =
-    dates.flatMap(
-      (date) =>
-        dto.courtIds.flatMap(
-          (courtId) =>
-            requestedSlots.map(
-              (time) => {
-                const slotId =
-                  `${courtId}_${date}_${time}`.replace(
-                    ':',
-                    '-',
-                  );
+    const dates: string[] =
+      [];
 
-                return {
-                  courtId,
-                  date,
-                  time,
+    const current =
+      new Date(startDate);
 
-                  ref: db
+    while (
+      current <= endDate
+    ) {
+      const year =
+        current.getFullYear();
+
+      const month =
+        String(
+          current.getMonth() + 1,
+        ).padStart(
+          2,
+          '0',
+        );
+
+      const day =
+        String(
+          current.getDate(),
+        ).padStart(
+          2,
+          '0',
+        );
+
+      dates.push(
+        `${year}-${month}-${day}`,
+      );
+
+      current.setDate(
+        current.getDate() + 1,
+      );
+    }
+
+    const slotRefs =
+      dates.flatMap(
+        (date) =>
+          dto.courtIds.flatMap(
+            (courtId) =>
+              requestedSlots.map(
+                (time) => {
+                  const slotId =
+                    `${courtId}_${date}_${time}`.replace(
+                      ':',
+                      '-',
+                    );
+
+                  return db
                     .collection(
                       'bookingSlots',
                     )
-                    .doc(
-                      slotId,
-                    ),
-                };
-              },
-            ),
+                    .doc(slotId);
+                },
+              ),
+          ),
+      );
+
+    const snapshots =
+      await Promise.all(
+        slotRefs.map(
+          (ref) =>
+            ref.get(),
         ),
-    );
-
-  /*
-   * Check for conflicts first.
-   */
-  const snapshots =
-    await Promise.all(
-      slotItems.map(
-        ({ ref }) =>
-          ref.get(),
-      ),
-    );
-
-  const conflicts =
-    snapshots
-      .map(
-        (
-          snapshot,
-          index,
-        ) => ({
-          exists:
-            snapshot.exists,
-
-          item:
-            slotItems[index],
-        }),
-      )
-      .filter(
-        (entry) =>
-          entry.exists,
       );
 
-  if (
-    conflicts.length >
-    0
-  ) {
-    throw new BadRequestException(
-      'One or more selected slots are already booked or blocked.',
-    );
-  }
+    const refsToDelete =
+      snapshots
+        .map(
+          (
+            snapshot,
+            index,
+          ) => ({
+            snapshot,
+            ref:
+              slotRefs[index],
+          }),
+        )
+        .filter(
+          ({ snapshot }) => {
+            if (
+              !snapshot.exists
+            ) {
+              return false;
+            }
 
-  /*
-   * Firestore batch limit is 500 writes.
-   * Split into chunks.
-   */
-  const chunkSize =
-    450;
+            const data =
+              snapshot.data();
 
-  for (
-    let index = 0;
-    index <
-    slotItems.length;
-    index += chunkSize
-  ) {
-    const chunk =
-      slotItems.slice(
-        index,
-        index +
-          chunkSize,
-      );
-
-    const batch =
-      db.batch();
-
-    chunk.forEach(
-      ({
-        ref,
-        courtId,
-        date,
-        time,
-      }) => {
-        batch.set(
-          ref,
-          {
-            type:
-              'MANUAL_BLOCK',
-
-            blockType:
-              'BULK',
-
-            courtId,
-
-            date,
-
-            startTime:
-              time,
-
-            reason:
-              dto.reason ??
-              'Bulk admin block',
-
-            createdAt:
-              new Date(),
+            return (
+              data?.type ===
+              'MANUAL_BLOCK'
+            );
           },
+        )
+        .map(
+          ({ ref }) => ref,
         );
-      },
-    );
 
-    await batch.commit();
-  }
+    const chunkSize = 450;
 
-  return {
-    message:
-      'Bulk court closure created successfully.',
-
-    courtIds:
-      dto.courtIds,
-
-    startDate:
-      dto.startDate,
-
-    endDate:
-      dto.endDate,
-
-    startTime:
-      dto.startTime,
-
-    endTime:
-      dto.endTime,
-
-    datesBlocked:
-      dates.length,
-
-    slotsBlocked:
-      slotItems.length,
-  };
-}
-
-async bulkUnblockCourtSlots(dto: {
-  courtIds: string[];
-  startDate: string;
-  endDate: string;
-  startTime: string;
-  endTime: string;
-}) {
-  const db =
-    this.firebaseService.firestore;
-
-  const startDate =
-    new Date(
-      `${dto.startDate}T00:00:00`,
-    );
-
-  const endDate =
-    new Date(
-      `${dto.endDate}T00:00:00`,
-    );
-
-  if (
-    startDate > endDate
-  ) {
-    throw new BadRequestException(
-      'Start date cannot be after end date.',
-    );
-  }
-
-  const requestedSlots =
-    this.generateHourlySlots(
-      dto.startTime,
-      dto.endTime,
-    );
-
-  const dates: string[] =
-    [];
-
-  const current =
-    new Date(startDate);
-
-  while (
-    current <= endDate
-  ) {
-    const year =
-      current.getFullYear();
-
-    const month =
-      String(
-        current.getMonth() + 1,
-      ).padStart(
-        2,
-        '0',
-      );
-
-    const day =
-      String(
-        current.getDate(),
-      ).padStart(
-        2,
-        '0',
-      );
-
-    dates.push(
-      `${year}-${month}-${day}`,
-    );
-
-    current.setDate(
-      current.getDate() + 1,
-    );
-  }
-
-  const slotRefs =
-    dates.flatMap(
-      (date) =>
-        dto.courtIds.flatMap(
-          (courtId) =>
-            requestedSlots.map(
-              (time) => {
-                const slotId =
-                  `${courtId}_${date}_${time}`.replace(
-                    ':',
-                    '-',
-                  );
-
-                return db
-                  .collection(
-                    'bookingSlots',
-                  )
-                  .doc(slotId);
-              },
-            ),
-        ),
-    );
-
-  const snapshots =
-    await Promise.all(
-      slotRefs.map(
-        (ref) =>
-          ref.get(),
-      ),
-    );
-
-  const refsToDelete =
-    snapshots
-      .map(
-        (
-          snapshot,
+    for (
+      let index = 0;
+      index <
+      refsToDelete.length;
+      index += chunkSize
+    ) {
+      const chunk =
+        refsToDelete.slice(
           index,
-        ) => ({
-          snapshot,
-          ref:
-            slotRefs[index],
-        }),
-      )
-      .filter(
-        ({ snapshot }) => {
-          if (
-            !snapshot.exists
-          ) {
-            return false;
-          }
-
-          const data =
-            snapshot.data();
-
-          return (
-            data?.type ===
-            'MANUAL_BLOCK'
-          );
-        },
-      )
-      .map(
-        ({ ref }) => ref,
-      );
-
-  const chunkSize = 450;
-
-  for (
-    let index = 0;
-    index <
-    refsToDelete.length;
-    index += chunkSize
-  ) {
-    const chunk =
-      refsToDelete.slice(
-        index,
-        index +
+          index +
           chunkSize,
+        );
+
+      const batch =
+        db.batch();
+
+      chunk.forEach(
+        (ref) => {
+          batch.delete(ref);
+        },
       );
 
-    const batch =
-      db.batch();
+      await batch.commit();
+    }
 
-    chunk.forEach(
-      (ref) => {
-        batch.delete(ref);
-      },
-    );
+    return {
+      message:
+        'Bulk court closure removed successfully.',
 
-    await batch.commit();
+      slotsReopened:
+        refsToDelete.length,
+    };
   }
-
-  return {
-    message:
-      'Bulk court closure removed successfully.',
-
-    slotsReopened:
-      refsToDelete.length,
-  };
-}
 
   private generateHourlySlots(
     startTime: string,

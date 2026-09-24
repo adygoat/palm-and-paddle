@@ -51,6 +51,16 @@ interface Booking {
 
   totalPrice?: number;
 
+  securityDeposit?: number;
+
+  remainingBalance?: number;
+
+  depositStatus?:
+  | 'UNPAID'
+  | 'VERIFIED';
+
+  depositPaidAmount?: number;
+
   status: BookingStatus;
 
   notes?: string;
@@ -114,8 +124,8 @@ function todayString() {
   const local =
     new Date(
       now.getTime() -
-        now.getTimezoneOffset() *
-          60000,
+      now.getTimezoneOffset() *
+      60000,
     );
 
   return local
@@ -445,6 +455,7 @@ export default function AdminDashboard() {
   async function updateBooking(
     id: string,
     action:
+      | 'verify-deposit'
       | 'confirm'
       | 'cancel'
       | 'complete',
@@ -485,13 +496,13 @@ export default function AdminDashboard() {
   ) {
     const clicked =
       scheduleSlots[
-        clickedIndex
+      clickedIndex
       ];
 
     if (
       !clicked ||
       clicked.status ===
-        'BOOKED'
+      'BOOKED'
     ) {
       return;
     }
@@ -530,9 +541,9 @@ export default function AdminDashboard() {
      */
     if (
       clickedIndex ===
-        startIndex &&
+      startIndex &&
       selectedScheduleEnd ===
-        clicked.endTime
+      clicked.endTime
     ) {
       setSelectedScheduleStart(
         '',
@@ -574,7 +585,7 @@ export default function AdminDashboard() {
     if (
       !startingStatus ||
       startingStatus ===
-        'BOOKED'
+      'BOOKED'
     ) {
       return;
     }
@@ -934,13 +945,13 @@ export default function AdminDashboard() {
                 ) => {
                   const selected =
                     selectedScheduleStartIndex >=
-                      0 &&
+                    0 &&
                     selectedScheduleEndIndex >=
-                      selectedScheduleStartIndex &&
+                    selectedScheduleStartIndex &&
                     index >=
-                      selectedScheduleStartIndex &&
+                    selectedScheduleStartIndex &&
                     index <=
-                      selectedScheduleEndIndex;
+                    selectedScheduleEndIndex;
 
                   return (
                     <button
@@ -956,17 +967,17 @@ export default function AdminDashboard() {
                         'admin-schedule-slot',
 
                         slot.status ===
-                        'OPEN'
+                          'OPEN'
                           ? 'admin-slot-open'
                           : '',
 
                         slot.status ===
-                        'BOOKED'
+                          'BOOKED'
                           ? 'admin-slot-booked'
                           : '',
 
                         slot.status ===
-                        'BLOCKED'
+                          'BLOCKED'
                           ? 'admin-slot-blocked'
                           : '',
 
@@ -990,10 +1001,10 @@ export default function AdminDashboard() {
 
                       <span>
                         {slot.status ===
-                        'OPEN'
+                          'OPEN'
                           ? 'OPEN'
                           : slot.status ===
-                              'BOOKED'
+                            'BOOKED'
                             ? 'BOOKED'
                             : 'CLOSED'}
                       </span>
@@ -1026,39 +1037,39 @@ export default function AdminDashboard() {
                 <div className="admin-selected-actions">
                   {selectedScheduleStatus ===
                     'OPEN' && (
-                    <button
-                      type="button"
-                      className="close-court-button"
-                      disabled={
-                        scheduleUpdating
-                      }
-                      onClick={
-                        updateCourtSchedule
-                      }
-                    >
-                      {scheduleUpdating
-                        ? 'Closing...'
-                        : 'Close Selected Time'}
-                    </button>
-                  )}
+                      <button
+                        type="button"
+                        className="close-court-button"
+                        disabled={
+                          scheduleUpdating
+                        }
+                        onClick={
+                          updateCourtSchedule
+                        }
+                      >
+                        {scheduleUpdating
+                          ? 'Closing...'
+                          : 'Close Selected Time'}
+                      </button>
+                    )}
 
                   {selectedScheduleStatus ===
                     'BLOCKED' && (
-                    <button
-                      type="button"
-                      className="open-court-button"
-                      disabled={
-                        scheduleUpdating
-                      }
-                      onClick={
-                        updateCourtSchedule
-                      }
-                    >
-                      {scheduleUpdating
-                        ? 'Opening...'
-                        : 'Reopen Selected Time'}
-                    </button>
-                  )}
+                      <button
+                        type="button"
+                        className="open-court-button"
+                        disabled={
+                          scheduleUpdating
+                        }
+                        onClick={
+                          updateCourtSchedule
+                        }
+                      >
+                        {scheduleUpdating
+                          ? 'Opening...'
+                          : 'Reopen Selected Time'}
+                      </button>
+                    )}
 
                   <button
                     type="button"
@@ -1164,15 +1175,15 @@ export default function AdminDashboard() {
                 key={status}
                 className={
                   filter ===
-                  status
+                    status
                     ? 'active-filter'
                     : ''
                 }
                 onClick={() =>
                   setFilter(
                     status as
-                      | 'ALL'
-                      | BookingStatus,
+                    | 'ALL'
+                    | BookingStatus,
                   )
                 }
               >
@@ -1206,8 +1217,8 @@ export default function AdminDashboard() {
                   (
                     booking.courtId
                       ? [
-                          booking.courtId,
-                        ]
+                        booking.courtId,
+                      ]
                       : []
                   );
 
@@ -1303,6 +1314,56 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
+                      <div>
+                        <span>
+                          Security Deposit
+                        </span>
+
+                        <strong>
+                          ₱
+                          {(
+                            booking.securityDeposit ??
+                            100
+                          ).toLocaleString()}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Remaining Balance
+                        </span>
+
+                        <strong className="admin-price">
+                          ₱
+                          {(
+                            booking.remainingBalance ??
+                            Math.max(
+                              (booking.totalPrice ?? 0) -
+                              100,
+                              0,
+                            )
+                          ).toLocaleString()}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Deposit Status
+                        </span>
+
+                        <strong
+                          className={
+                            booking.depositStatus ===
+                              'VERIFIED'
+                              ? 'deposit-verified'
+                              : 'deposit-unpaid'
+                          }
+                        >
+                          {booking.depositStatus ??
+                            'UNPAID'}
+                        </strong>
+                      </div>
+
                       <div className="customer-contact">
                         <span>
                           {
@@ -1329,83 +1390,86 @@ export default function AdminDashboard() {
                     <div className="admin-actions">
                       {booking.status ===
                         'PENDING' && (
-                        <>
-                          <button
-                            className="confirm-button"
-                            disabled={
-                              updatingId ===
-                              booking.id
-                            }
-                            onClick={() =>
-                              updateBooking(
-                                booking.id,
-                                'confirm',
-                              )
-                            }
-                          >
-                            {updatingId ===
-                            booking.id
-                              ? 'Updating...'
-                              : 'Confirm'}
-                          </button>
+                          <>
+                            {booking.depositStatus !==
+                              'VERIFIED' && (
+                                <button
+                                  className="confirm-button"
+                                  disabled={
+                                    updatingId ===
+                                    booking.id
+                                  }
+                                  onClick={() =>
+                                    updateBooking(
+                                      booking.id,
+                                      'verify-deposit',
+                                    )
+                                  }
+                                >
+                                  {updatingId ===
+                                    booking.id
+                                    ? 'Verifying...'
+                                    : 'Verify ₱100 Deposit'}
+                                </button>
+                              )}
 
-                          <button
-                            className="cancel-button"
-                            disabled={
-                              updatingId ===
-                              booking.id
-                            }
-                            onClick={() =>
-                              updateBooking(
-                                booking.id,
-                                'cancel',
-                              )
-                            }
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      )}
+                            <button
+                              className="cancel-button"
+                              disabled={
+                                updatingId ===
+                                booking.id
+                              }
+                              onClick={() =>
+                                updateBooking(
+                                  booking.id,
+                                  'cancel',
+                                )
+                              }
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
 
                       {booking.status ===
                         'CONFIRMED' && (
-                        <>
-                          <button
-                            className="complete-button"
-                            disabled={
-                              updatingId ===
-                              booking.id
-                            }
-                            onClick={() =>
-                              updateBooking(
-                                booking.id,
-                                'complete',
-                              )
-                            }
-                          >
-                            {updatingId ===
-                            booking.id
-                              ? 'Updating...'
-                              : 'Complete'}
-                          </button>
+                          <>
+                            <button
+                              className="complete-button"
+                              disabled={
+                                updatingId ===
+                                booking.id
+                              }
+                              onClick={() =>
+                                updateBooking(
+                                  booking.id,
+                                  'complete',
+                                )
+                              }
+                            >
+                              {updatingId ===
+                                booking.id
+                                ? 'Updating...'
+                                : 'Complete'}
+                            </button>
 
-                          <button
-                            className="cancel-button"
-                            disabled={
-                              updatingId ===
-                              booking.id
-                            }
-                            onClick={() =>
-                              updateBooking(
-                                booking.id,
-                                'cancel',
-                              )
-                            }
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      )}
+                            <button
+                              className="cancel-button"
+                              disabled={
+                                updatingId ===
+                                booking.id
+                              }
+                              onClick={() =>
+                                updateBooking(
+                                  booking.id,
+                                  'cancel',
+                                )
+                              }
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
                     </div>
                   </article>
                 );

@@ -3487,4 +3487,122 @@ textarea {
   border-color: #dddddd;
   cursor: not-allowed;
 }
+
+.booking-success-payment {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid #c8dfc1;
+  border-radius: 16px;
+  background: #f5fbf2;
+}
+
+.success-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.success-heading strong {
+  font-size: 20px;
+  color: #215f2c;
+}
+
+.booking-confirmation-details {
+  padding: 18px;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.booking-confirmation-details h3 {
+  margin-top: 0;
+}
+
+.confirmation-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.confirmation-row:last-child {
+  border-bottom: none;
+}
+
+.deposit-row strong {
+  color: #e3548a;
+}
+
+.deposit-payment-section {
+  text-align: center;
+  padding: 22px;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+
+.gcash-qr {
+  display: block;
+  width: min(100%, 340px);
+  height: auto;
+  margin: 18px auto;
+  border-radius: 12px;
+}
+
+.deposit-amount {
+  display: block;
+  font-size: 20px;
+  color: #215f2c;
+}
+
+.screenshot-reminder {
+  padding: 16px;
+  border-radius: 12px;
+  background: #fff4d6;
+  border: 1px solid #ead390;
+  margin-top: 18px;
+}
+
+.screenshot-reminder strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.screenshot-reminder p {
+  margin: 0;
+}
+
+.pending-warning {
+  margin-top: 18px;
+  font-size: 14px;
+  text-align: center;
+}
+.deposit-unpaid {
+  color: #c0392b;
+  font-weight: 700;
+}
+
+.deposit-verified {
+  color: #2e7d32;
+  font-weight: 700;
+}
+
+.facebook-message-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: #1877f2;
+  color: white;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.facebook-message-button:hover {
+  opacity: 0.9;
+}
 }

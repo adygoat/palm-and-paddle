@@ -30,8 +30,7 @@ export class BookingsService {
         .map(Number);
 
     if (
-      endTime ===
-      '00:00'
+      endTime === '00:00'
     ) {
       endHour = 24;
     }
@@ -45,16 +44,14 @@ export class BookingsService {
     }
 
     if (
-      startHour >=
-      endHour
+      startHour >= endHour
     ) {
       throw new BadRequestException(
         'End time must be later than start time.',
       );
     }
 
-    const slots: string[] =
-      [];
+    const slots: string[] = [];
 
     for (
       let hour = startHour;
@@ -74,52 +71,72 @@ export class BookingsService {
     return slots;
   }
 
-private isCourtTimeAllowed(
-  courtId: string,
-  startTime: string,
-): boolean {
-  const hour =
-    Number(
-      startTime.split(
-        ':',
-      )[0],
-    );
-  if (
-    hour >= 6 &&
-    hour < 9
-  ) {
-    return true;
-  }
+  private isCourtTimeAllowed(
+    courtId: string,
+    startTime: string,
+  ): boolean {
+    const hour =
+      Number(
+        startTime.split(
+          ':',
+        )[0],
+      );
 
-  if (
-    hour >= 9 &&
-    hour < 16
-  ) {
+    /*
+     * BOTH COURTS
+     * 6 AM - 9 AM
+     *
+     * 6-7
+     * 7-8
+     * 8-9
+     */
+    if (
+      hour >= 6 &&
+      hour < 9
+    ) {
+      return true;
+    }
+
+    /*
+     * BOTH COURTS CLOSED
+     * 9 AM - 4 PM
+     */
+    if (
+      hour >= 9 &&
+      hour < 16
+    ) {
+      return false;
+    }
+
+    /*
+     * COURT 1
+     * 4 PM - 6 PM only
+     */
+    if (
+      courtId === 'court-1'
+    ) {
+      return (
+        hour >= 16 &&
+        hour < 18
+      );
+    }
+
+    /*
+     * COURT 2
+     * 4 PM - 12 AM
+     */
+    if (
+      courtId === 'court-2'
+    ) {
+      return (
+        hour >= 16 &&
+        hour < 24
+      );
+    }
+
     return false;
   }
 
-  if (
-    courtId ===
-    'court-1'
-  ) {
-    return (
-      hour >= 16 &&
-      hour < 18
-    );
-  }
-
-  if (
-    courtId ===
-    'court-2'
-  ) {
-    return (
-      hour >= 16 &&
-      hour < 24
-    );
-  }
-
-  return false;
-}
   private calculatePricing(
     courtIds: string[],
     requestedSlots: string[],
@@ -138,12 +155,20 @@ private isCourtTimeAllowed(
           )[0],
         );
 
+      /*
+       * 6 AM - 5 PM
+       * ₱250/hour/court
+       */
       if (
         hour >= 6 &&
         hour < 17
       ) {
         daytimeHours++;
       } else {
+        /*
+         * 5 PM onwards
+         * ₱300/hour/court
+         */
         eveningHours++;
       }
     }
@@ -151,11 +176,8 @@ private isCourtTimeAllowed(
     const courtCount =
       courtIds.length;
 
-    const daytimeRate =
-      250;
-
-    const eveningRate =
-      300;
+    const daytimeRate = 250;
+    const eveningRate = 300;
 
     const daytimeSubtotal =
       daytimeHours *
@@ -214,8 +236,7 @@ private isCourtTimeAllowed(
       );
 
     /*
-     * Validate the permanent
-     * court schedule first.
+     * Check permanent court schedule.
      */
     const invalidSlot =
       dto.courtIds
@@ -245,10 +266,29 @@ private isCourtTimeAllowed(
       );
     }
 
+    /*
+     * Calculate full court fee.
+     */
     const pricing =
       this.calculatePricing(
         dto.courtIds,
         requestedSlots,
+      );
+
+    /*
+     * Security deposit.
+     *
+     * This is NOT an extra fee.
+     * It is deducted from the
+     * total court fee.
+     */
+    const securityDeposit = 100;
+
+    const remainingBalance =
+      Math.max(
+        pricing.totalPrice -
+          securityDeposit,
+        0,
       );
 
     const bookingRef =
@@ -334,49 +374,65 @@ private isCourtTimeAllowed(
           );
         }
 
-        const bookingData =
-          {
-            customerName:
-              dto.customerName,
+        const bookingData = {
+          customerName:
+            dto.customerName,
 
-            email:
-              dto.email,
+          email:
+            dto.email,
 
-            phone:
-              dto.phone,
+          phone:
+            dto.phone,
 
-            courtIds:
-              dto.courtIds,
+          courtIds:
+            dto.courtIds,
 
-            date:
-              dto.date,
+          date:
+            dto.date,
 
-            startTime:
-              dto.startTime,
+          startTime:
+            dto.startTime,
 
-            endTime:
-              dto.endTime,
+          endTime:
+            dto.endTime,
 
-            reference,
+          reference,
 
-            status:
-              'PENDING',
+          /*
+           * Booking is pending
+           * until deposit is verified.
+           */
+          status:
+            'PENDING',
 
-            pricing,
+          /*
+           * Payment/deposit details
+           */
+          securityDeposit,
 
-            totalPrice:
-              pricing.totalPrice,
+          depositStatus:
+            'UNPAID',
 
-            createdAt:
-              new Date(),
+          remainingBalance,
 
-            ...(dto.notes
-              ? {
-                  notes:
-                    dto.notes,
-                }
-              : {}),
-          };
+          /*
+           * Full court pricing
+           */
+          pricing,
+
+          totalPrice:
+            pricing.totalPrice,
+
+          createdAt:
+            new Date(),
+
+          ...(dto.notes
+            ? {
+                notes:
+                  dto.notes,
+              }
+            : {}),
+        };
 
         transaction.set(
           bookingRef,
@@ -452,8 +508,33 @@ private isCourtTimeAllowed(
       status:
         'PENDING',
 
+      customerName:
+        dto.customerName,
+
+      email:
+        dto.email,
+
+      phone:
+        dto.phone,
+
       courtIds:
         dto.courtIds,
+
+      date:
+        dto.date,
+
+      startTime:
+        dto.startTime,
+
+      endTime:
+        dto.endTime,
+
+      securityDeposit,
+
+      depositStatus:
+        'UNPAID',
+
+      remainingBalance,
 
       pricing,
 
@@ -461,7 +542,7 @@ private isCourtTimeAllowed(
         pricing.totalPrice,
 
       message:
-        'Booking request submitted successfully.',
+        'Booking request submitted successfully. Please pay the ₱100 security deposit. The deposit will be deducted from the total court fee.',
     };
   }
 }

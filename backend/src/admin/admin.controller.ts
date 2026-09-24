@@ -21,7 +21,7 @@ import { BulkBlockCourtDto } from './dto/bulk-block-court.dto';
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
-  ) {}
+  ) { }
 
   @Get()
   getAllBookings() {
@@ -70,8 +70,8 @@ export class AdminController {
 
   @Post('bulk-blocks')
   bulkBlockCourts(
-   @Body()
-   dto: BulkBlockCourtDto,
+    @Body()
+    dto: BulkBlockCourtDto,
   ) {
     return this.adminService.bulkBlockCourtSlots(
       dto,
@@ -79,14 +79,14 @@ export class AdminController {
   }
   @Delete('bulk-blocks')
   bulkUnblockCourts(
-   @Body()
-   dto: BulkBlockCourtDto,
- ) {
-   return this.adminService
-    .bulkUnblockCourtSlots(
-      dto,
-    );
- }
+    @Body()
+    dto: BulkBlockCourtDto,
+  ) {
+    return this.adminService
+      .bulkUnblockCourtSlots(
+        dto,
+      );
+  }
 
 
   @Get(':id')
@@ -95,6 +95,16 @@ export class AdminController {
     id: string,
   ) {
     return this.adminService.getBookingById(
+      id,
+    );
+  }
+
+  @Patch(':id/verify-deposit')
+  verifyDeposit(
+    @Param('id')
+    id: string,
+  ) {
+    return this.adminService.verifyDeposit(
       id,
     );
   }

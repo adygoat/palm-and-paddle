@@ -31,6 +31,15 @@ interface BookingResponse {
   courtIds: string[];
   totalPrice: number;
   message: string;
+  customerName: string;
+  email: string;
+  phone: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  securityDeposit: number;
+  depositStatus: string;
+  remainingBalance: number;
 }
 
 const COURTS = [
@@ -72,8 +81,8 @@ function todayString() {
   const local =
     new Date(
       now.getTime() -
-        now.getTimezoneOffset() *
-          60000,
+      now.getTimezoneOffset() *
+      60000,
     );
 
   return local
@@ -153,28 +162,28 @@ export default function Booking() {
     );
 
   function toggleCourt(
-  courtId: string,
-) {
-  setCourtIds(
-    (current) => {
-      if (
-        current.includes(
-          courtId,
-        )
-      ) {
-        return current.filter(
-          (id) =>
-            id !== courtId,
-        );
-      }
+    courtId: string,
+  ) {
+    setCourtIds(
+      (current) => {
+        if (
+          current.includes(
+            courtId,
+          )
+        ) {
+          return current.filter(
+            (id) =>
+              id !== courtId,
+          );
+        }
 
-      return [
-        ...current,
-        courtId,
-      ];
-    },
-  );
-}
+        return [
+          ...current,
+          courtId,
+        ];
+      },
+    );
+  }
 
   useEffect(() => {
     setStartTime('');
@@ -220,61 +229,61 @@ export default function Booking() {
         }
 
         const combined =
-            first.slots.map(
-              (slot) => {
-                const matchingSlots =
-                  results
-                    .map(
-                      (court) =>
-                        court.slots.find(
-                          (item) =>
-                            item.startTime ===
-                            slot.startTime,
-                        ),
-                    )
-                    .filter(
-                      (
-                        item,
-                      ): item is Slot =>
-                        Boolean(item),
-                    );
-
-                const available =
-                  matchingSlots.length ===
-                    results.length &&
-                  matchingSlots.every(
-                    (item) =>
-                      item.available,
+          first.slots.map(
+            (slot) => {
+              const matchingSlots =
+                results
+                  .map(
+                    (court) =>
+                      court.slots.find(
+                        (item) =>
+                          item.startTime ===
+                          slot.startTime,
+                      ),
+                  )
+                  .filter(
+                    (
+                      item,
+                    ): item is Slot =>
+                      Boolean(item),
                   );
 
-                let reason:
-                  | 'CLOSED'
-                  | 'BOOKED'
-                  | null = null;
+              const available =
+                matchingSlots.length ===
+                results.length &&
+                matchingSlots.every(
+                  (item) =>
+                    item.available,
+                );
 
-                if (!available) {
-                  if (
-                    matchingSlots.some(
-                      (item) =>
-                        item.reason ===
-                        'BOOKED',
-                    )
-                  ) {
-                    reason =
-                      'BOOKED';
-                  } else {
-                    reason =
-                      'CLOSED';
-                  }
+              let reason:
+                | 'CLOSED'
+                | 'BOOKED'
+                | null = null;
+
+              if (!available) {
+                if (
+                  matchingSlots.some(
+                    (item) =>
+                      item.reason ===
+                      'BOOKED',
+                  )
+                ) {
+                  reason =
+                    'BOOKED';
+                } else {
+                  reason =
+                    'CLOSED';
                 }
+              }
 
-                return {
-                  ...slot,
-                  available,
-                  reason,
-                };
-              },
-            );
+              return {
+                ...slot,
+                available,
+                reason,
+              };
+            },
+          );
 
         setCombinedSlots(
           combined,
@@ -563,9 +572,9 @@ export default function Booking() {
 
                 ...(notes.trim()
                   ? {
-                      notes:
-                        notes.trim(),
-                    }
+                    notes:
+                      notes.trim(),
+                  }
                   : {}),
               }),
           },
@@ -734,7 +743,7 @@ export default function Booking() {
 
                   <p>
                     {courtIds.length ===
-                    2
+                      2
                       ? 'Showing hours when BOTH courts are available.'
                       : 'Showing available hours for your selected court.'}
                   </p>
@@ -763,13 +772,13 @@ export default function Booking() {
                     ) => {
                       const selected =
                         selectedStartIndex >=
-                          0 &&
+                        0 &&
                         selectedEndIndex >=
-                          selectedStartIndex &&
+                        selectedStartIndex &&
                         index >=
-                          selectedStartIndex &&
+                        selectedStartIndex &&
                         index <=
-                          selectedEndIndex;
+                        selectedEndIndex;
 
                       return (
                         <button
@@ -785,7 +794,7 @@ export default function Booking() {
                             slot.available
                               ? 'slot-available'
                               : slot.reason ===
-                                  'CLOSED'
+                                'CLOSED'
                                 ? 'slot-closed'
                                 : 'slot-booked',
 
@@ -800,21 +809,21 @@ export default function Booking() {
                           }
                         >
                           <strong>
-                          {displayTime(
-                            slot.startTime,
-                          )}
-                        </strong>
+                            {displayTime(
+                              slot.startTime,
+                            )}
+                          </strong>
 
-                        <span>
-                          {slot.available
-                            ? `to ${displayTime(
+                          <span>
+                            {slot.available
+                              ? `to ${displayTime(
                                 slot.endTime,
                               )}`
-                            : slot.reason ===
+                              : slot.reason ===
                                 'CLOSED'
-                              ? 'CLOSED'
-                              : 'BOOKED'}
-                        </span>
+                                ? 'CLOSED'
+                                : 'BOOKED'}
+                          </span>
                         </button>
                       );
                     },
@@ -887,61 +896,61 @@ export default function Booking() {
 
               {priceBreakdown.dayHours >
                 0 && (
-                <div className="price-row">
-                  <span>
-                    6 AM – 5 PM
+                  <div className="price-row">
+                    <span>
+                      6 AM – 5 PM
 
-                    <small>
-                      {
-                        priceBreakdown.dayHours
-                      }{' '}
-                      hr × ₱250 ×{' '}
-                      {
-                        priceBreakdown.courtCount
-                      }{' '}
-                      court
-                      {priceBreakdown.courtCount >
-                      1
-                        ? 's'
-                        : ''}
-                    </small>
-                  </span>
+                      <small>
+                        {
+                          priceBreakdown.dayHours
+                        }{' '}
+                        hr × ₱250 ×{' '}
+                        {
+                          priceBreakdown.courtCount
+                        }{' '}
+                        court
+                        {priceBreakdown.courtCount >
+                          1
+                          ? 's'
+                          : ''}
+                      </small>
+                    </span>
 
-                  <strong>
-                    ₱
-                    {priceBreakdown.daySubtotal.toLocaleString()}
-                  </strong>
-                </div>
-              )}
+                    <strong>
+                      ₱
+                      {priceBreakdown.daySubtotal.toLocaleString()}
+                    </strong>
+                  </div>
+                )}
 
               {priceBreakdown.eveningHours >
                 0 && (
-                <div className="price-row">
-                  <span>
-                    5 PM – 12 AM
+                  <div className="price-row">
+                    <span>
+                      5 PM – 12 AM
 
-                    <small>
-                      {
-                        priceBreakdown.eveningHours
-                      }{' '}
-                      hr × ₱300 ×{' '}
-                      {
-                        priceBreakdown.courtCount
-                      }{' '}
-                      court
-                      {priceBreakdown.courtCount >
-                      1
-                        ? 's'
-                        : ''}
-                    </small>
-                  </span>
+                      <small>
+                        {
+                          priceBreakdown.eveningHours
+                        }{' '}
+                        hr × ₱300 ×{' '}
+                        {
+                          priceBreakdown.courtCount
+                        }{' '}
+                        court
+                        {priceBreakdown.courtCount >
+                          1
+                          ? 's'
+                          : ''}
+                      </small>
+                    </span>
 
-                  <strong>
-                    ₱
-                    {priceBreakdown.eveningSubtotal.toLocaleString()}
-                  </strong>
-                </div>
-              )}
+                    <strong>
+                      ₱
+                      {priceBreakdown.eveningSubtotal.toLocaleString()}
+                    </strong>
+                  </div>
+                )}
 
               <div className="price-total">
                 <span>
@@ -1062,30 +1071,170 @@ export default function Booking() {
           )}
 
           {success && (
-            <div className="alert success-alert">
-              <strong>
-                Booking request
-                submitted!
-              </strong>
+            <div className="booking-success-payment">
+              <div className="success-heading">
+                <strong>
+                  Booking request submitted!
+                </strong>
 
-              <span>
-                Reference:{' '}
-                <b>
-                  {
-                    success.reference
-                  }
-                </b>
-              </span>
+                <span>
+                  Your reservation is currently PENDING.
+                </span>
+              </div>
 
-              <span>
-                Total: ₱
-                {success.totalPrice.toLocaleString()}
-              </span>
+              <div className="booking-confirmation-details">
+                <h3>
+                  Booking Details
+                </h3>
 
-              <span>
-                Please wait for your
-                confirmation email.
-              </span>
+                <div className="confirmation-row">
+                  <span>Reference</span>
+
+                  <strong>
+                    {success.reference}
+                  </strong>
+                </div>
+
+                <div className="confirmation-row">
+                  <span>Name</span>
+
+                  <strong>
+                    {success.customerName}
+                  </strong>
+                </div>
+
+                <div className="confirmation-row">
+                  <span>Court</span>
+
+                  <strong>
+                    {success.courtIds
+                      .map(
+                        (id) =>
+                          id === 'court-1'
+                            ? 'Court 1'
+                            : 'Court 2',
+                      )
+                      .join(', ')}
+                  </strong>
+                </div>
+
+                <div className="confirmation-row">
+                  <span>Date</span>
+
+                  <strong>
+                    {success.date}
+                  </strong>
+                </div>
+
+                <div className="confirmation-row">
+                  <span>Time</span>
+
+                  <strong>
+                    {displayTime(
+                      success.startTime,
+                    )}
+                    {' – '}
+                    {displayTime(
+                      success.endTime,
+                    )}
+                  </strong>
+                </div>
+
+                <div className="confirmation-row">
+                  <span>
+                    Total Court Fee
+                  </span>
+
+                  <strong>
+                    ₱
+                    {success.totalPrice.toLocaleString()}
+                  </strong>
+                </div>
+
+                <div className="confirmation-row deposit-row">
+                  <span>
+                    Security Deposit
+                  </span>
+
+                  <strong>
+                    ₱
+                    {success.securityDeposit.toLocaleString()}
+                  </strong>
+                </div>
+
+                <div className="confirmation-row">
+                  <span>
+                    Remaining Balance
+                  </span>
+
+                  <strong>
+                    ₱
+                    {success.remainingBalance.toLocaleString()}
+                  </strong>
+                </div>
+
+                <div className="confirmation-row">
+                  <span>Status</span>
+
+                  <strong>
+                    PENDING
+                  </strong>
+                </div>
+              </div>
+
+              <div className="deposit-payment-section">
+                <span className="eyebrow">
+                  SECURITY DEPOSIT
+                </span>
+
+                <h3>
+                  Pay ₱100 through GCash
+                </h3>
+
+                <p>
+                  The ₱100 security deposit will
+                  be deducted from your total court fee.
+                </p>
+
+                <img
+                  className="gcash-qr"
+                  src="/gcash-qr.png"
+                  alt="GCash security deposit QR"
+                />
+
+                <strong className="deposit-amount">
+                  Amount to send: ₱100
+                </strong>
+              </div>
+
+              <div className="screenshot-reminder">
+                <strong>
+                  Please screenshot your booking details.
+                </strong>
+
+                <p>
+                  After sending the ₱100 security deposit,
+                  screenshot your GCash payment receipt
+                  and this booking details section.
+                  Send both screenshots to our Facebook page
+                  for verification.
+
+                  <a
+                    className="facebook-message-button"
+                    href="https://www.facebook.com/profile.php?id=61592575107192"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Send Screenshots on Facebook
+                  </a>
+                </p>
+              </div>
+
+              <p className="pending-warning">
+                Your booking remains PENDING until the
+                security deposit has been verified by
+                ChocsDwacks Palm & Paddle Sports Center.
+              </p>
             </div>
           )}
 
@@ -1145,7 +1294,7 @@ export default function Booking() {
             per hour.
           </p>
 
-  <div className="side-divider" />
+          <div className="side-divider" />
 
           <h3>
             Court Availability
@@ -1181,22 +1330,22 @@ export default function Booking() {
             </li>
 
             <li>
-              Tap the time blocks to 
+              Tap the time blocks to
               choose your booking range.
             </li>
 
             <li>
               Book multiple consecutive
-               hours.
+              hours.
             </li>
 
             <li>
               Unavailable hours cannot
-               be selected.
+              be selected.
             </li>
 
             <li>
-              Final confirmation is 
+              Final confirmation is
               sent through email.
             </li>
           </ul>
