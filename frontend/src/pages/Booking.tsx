@@ -15,7 +15,7 @@ interface Slot {
   startTime: string;
   endTime: string;
   available: boolean;
-  reason?: 'CLOSED' | 'BOOKED' | null;
+  reason?: 'CLOSED' | 'BOOKED' | 'PAST' | null;
 }
 
 interface AvailabilityResponse {
@@ -791,12 +791,16 @@ export default function Booking() {
                           }
                           className={[
                             'slot',
+
                             slot.available
                               ? 'slot-available'
                               : slot.reason ===
-                                'CLOSED'
-                                ? 'slot-closed'
-                                : 'slot-booked',
+                                'PAST'
+                                ? 'slot-past'
+                                : slot.reason ===
+                                  'CLOSED'
+                                  ? 'slot-closed'
+                                  : 'slot-booked',
 
                             selected
                               ? 'slot-selected'
@@ -820,9 +824,12 @@ export default function Booking() {
                                 slot.endTime,
                               )}`
                               : slot.reason ===
-                                'CLOSED'
-                                ? 'CLOSED'
-                                : 'BOOKED'}
+                                'PAST'
+                                ? 'PAST'
+                                : slot.reason ===
+                                  'CLOSED'
+                                  ? 'CLOSED'
+                                  : 'BOOKED'}
                           </span>
                         </button>
                       );

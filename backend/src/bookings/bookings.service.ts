@@ -13,7 +13,7 @@ export class BookingsService {
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   private generateHourlySlots(
     startTime: string,
@@ -70,7 +70,30 @@ export class BookingsService {
 
     return slots;
   }
+  private isPastSlotManila(
+    date: string,
+    startTime: string,
+  ): boolean {
+    /*
+     * Explicit +08:00 means
+     * Philippine / Manila time.
+     *
+     * Example:
+     * 2026-09-24T16:00:00+08:00
+     */
+    const slotStart =
+      new Date(
+        `${date}T${startTime}:00+08:00`,
+      );
 
+    const now =
+      new Date();
+
+    return (
+      slotStart.getTime() <=
+      now.getTime()
+    );
+  }
   private isCourtTimeAllowed(
     courtId: string,
     startTime: string,
@@ -235,6 +258,20 @@ export class BookingsService {
         dto.endTime,
       );
 
+    const pastSlot =
+      requestedSlots.find(
+        (time) =>
+          this.isPastSlotManila(
+            dto.date,
+            time,
+          ),
+      );
+
+    if (pastSlot) {
+      throw new BadRequestException(
+        'You cannot book a time slot that has already started or passed.',
+      );
+    }
     /*
      * Check permanent court schedule.
      */
@@ -287,7 +324,7 @@ export class BookingsService {
     const remainingBalance =
       Math.max(
         pricing.totalPrice -
-          securityDeposit,
+        securityDeposit,
         0,
       );
 
@@ -428,9 +465,9 @@ export class BookingsService {
 
           ...(dto.notes
             ? {
-                notes:
-                  dto.notes,
-              }
+              notes:
+                dto.notes,
+            }
             : {}),
         };
 
